@@ -1,226 +1,265 @@
 import javax.swing.*;
+import javax.swing.border.LineBorder;
 import java.awt.*;
-import java.io.*;
-import java.util.ArrayList;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
-public class TextAdventureMaker {
-    private static ArrayList<String> dialogues = new ArrayList<>();
-    private static ArrayList<ArrayList<String>> choices = new ArrayList<>();
-    private static ArrayList<ArrayList<String>> choiceDialogues = new ArrayList<>();
-    private static JTextArea textArea;
-    private static JTextArea gameOutputArea;
-    private static int currentDialogueIndex = 0;
+// Base Node class
+class Node {
+    String text;
+    Node next;
+
+    public Node(String text) {
+        this.text = text;
+        this.next = null;
+    }
+
+    public void setNext(Node next) {
+        this.next = next;
+    }
+
+    public String getText() {
+        return text;
+    }
+
+    public Node getNext() {
+        return next;
+    }
+}
+
+// Dialogue Node class
+class DialogueNode extends Node {
+    public DialogueNode(String text) {
+        super(text);
+    }
+}
+
+// Panel for each node
+class NodePanel extends JPanel {
+    private DialogueNode node;
+    private Point mousePoint;
+    private boolean dragging = false;
+    private boolean isConnecting = false;
+    private Point connectionEndPoint;
+    
+    public NodePanel(DialogueNode node) {
+        this.node = node;
+        setBorder(new LineBorder(Color.BLACK));
+        setPreferredSize(new Dimension(150, 100));
+        setBackground(Color.LIGHT_GRAY);
+        setLayout(null);
+        
+        JLabel label = new JLabel(node.getText());
+        label.setHorizontalAlignment(SwingConstants.CENTER);
+        label.setBounds(0, 0, 150, 80);
+        add(label);
+
+        // Right connection dot
+        JPanel rightDot = createDotPanel(Color.RED);
+        rightDot.setBounds(140, 40 - 5, 10, 10);
+        add(rightDot);
+
+        // Left connection dot
+        JPanel leftDot = createDotPanel(Color.GREEN);
+        leftDot.setBounds(0, 40 - 5, 10, 10);
+        add(leftDot);
+
+        // Mouse listeners for dragging the entire node
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                mousePoint = e.getPoint();
+                dragging = true;
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                dragging = false; // Stop dragging
+                getParent().repaint(); // Refresh the panel
+            }
+        });
+
+        addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (dragging) {
+                    Point p = getLocation();
+                    int newX = p.x + e.getX() - mousePoint.x;
+                    int newY = p.y + e.getY() - mousePoint.y;
+                    setLocation(newX, newY);
+                    getParent().repaint();
+                }
+            }
+        });
+
+        // Mouse listeners for connection
+        rightDot.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                isConnecting = true;
+                connectionEndPoint = getLocation();
+                connectionEndPoint.translate(150, 40); // Start from the right dot
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (isConnecting) {
+                    // Check for other nodes to connect to
+                    for (Component comp : getParent().getComponents()) {
+                        if (comp instanceof NodePanel && comp != NodePanel.this) {
+                            NodePanel targetNode = (NodePanel) comp;
+                            if (targetNode.getBounds().contains(e.getPoint())) {
+                                // Connect this node to the target node
+                                node.setNext(targetNode.getNode());
+                                break;
+                            }
+                        }
+                    }
+                }
+                isConnecting = false;
+                connectionEndPoint = null; // Reset end point
+                getParent().repaint(); // Refresh the panel
+            }
+        });
+
+        rightDot.addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (isConnecting) {
+                    connectionEndPoint = e.getLocationOnScreen();
+                    getParent().repaint();
+                }
+            }
+        });
+    }
+
+    private JPanel createDotPanel(Color color) {
+        return new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                g.setColor(color);
+                g.fillOval(0, 0, 10, 10);
+            }
+        };
+    }
+
+    public DialogueNode getNode() {
+        return node;
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        if (isConnecting && connectionEndPoint != null) {
+            // Draw the connection line
+            g.setColor(Color.BLACK);
+            g.drawLine(
+                getX() + 150, getY() + 40,
+                (int) (connectionEndPoint.getX()), (int) (connectionEndPoint.getY())
+            );
+        }
+    }
+}
+
+// Main application class
+public class TextAdventureMaker extends JFrame {
+    private JPanel canvas;
+    private DialogueNode head; // To keep track of the head of the dialogue linked list
+
+    public TextAdventureMaker() {
+        setTitle("Text Adventure Maker");
+        setSize(800, 600);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        canvas = new JPanel(null) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                drawConnections(g);
+            }
+        };
+        add(canvas, BorderLayout.CENTER);
+
+        JButton addDialogueButton = new JButton("Add Dialogue Node");
+        addDialogueButton.addActionListener(e -> addNode(new DialogueNode("New Dialogue")));
+
+        JButton runAdventureButton = new JButton("Run Adventure");
+        runAdventureButton.addActionListener(e -> runAdventure());
+
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(addDialogueButton);
+        buttonPanel.add(runAdventureButton);
+        add(buttonPanel, BorderLayout.SOUTH);
+    }
+
+    private void addNode(DialogueNode newNode) {
+        NodePanel nodePanel = new NodePanel(newNode);
+        int x = 50 * canvas.getComponentCount();
+        int y = 50;
+        nodePanel.setBounds(x, y, 150, 100);
+        canvas.add(nodePanel);
+        canvas.repaint();
+        canvas.revalidate();
+
+        // Connect to the previous node
+        if (head == null) {
+            head = newNode; // This is the first node
+        } else {
+            DialogueNode current = head;
+            while (current.getNext() != null) {
+                current = (DialogueNode) current.getNext(); // Cast to DialogueNode
+            }
+            current.setNext(newNode); // Link the new node to the last node
+        }
+    }
+
+    private void drawConnections(Graphics g) {
+        for (Component comp : canvas.getComponents()) {
+            if (comp instanceof NodePanel) {
+                NodePanel source = (NodePanel) comp;
+                Node currentNode = source.getNode();
+                while (currentNode != null && currentNode.getNext() != null) {
+                    NodePanel target = findNodePanel(currentNode.getNext());
+                    if (target != null) {
+                        g.drawLine(source.getX() + 150, source.getY() + 40,
+                                   target.getX(), target.getY() + 40);
+                    }
+                    currentNode = currentNode.getNext();
+                }
+            }
+        }
+    }
+
+    private NodePanel findNodePanel(Node node) {
+        for (Component comp : canvas.getComponents()) {
+            if (comp instanceof NodePanel) {
+                NodePanel panel = (NodePanel) comp;
+                if (panel.getNode() == node) {
+                    return panel;
+                }
+            }
+        }
+        return null;
+    }
+
+    private void runAdventure() {
+        if (head != null) {
+            StringBuilder sb = new StringBuilder();
+            Node current = head;
+            while (current != null) {
+                sb.append(current.getText()).append("\n");
+                current = current.getNext();
+            }
+            JOptionPane.showMessageDialog(this, sb.toString(), "Adventure Output", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(this, "No dialogue nodes available to run the adventure.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
 
     public static void main(String[] args) {
-        JFrame jframe = new JFrame("Text Adventure Maker");
-        jframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        jframe.setSize(600, 500);
-        jframe.setLayout(new BorderLayout());
-
-        JMenuBar topMenuBar = new JMenuBar();
-        JMenu fileMenu = new JMenu("File");
-        JMenuItem saveItem = new JMenuItem("Save");
-        JMenuItem loadItem = new JMenuItem("Load");
-        fileMenu.add(saveItem);
-        fileMenu.add(loadItem);
-        topMenuBar.add(fileMenu);
-
-        textArea = new JTextArea();
-        textArea.setEditable(false);
-        JScrollPane scrollPane = new JScrollPane(textArea);
-
-        gameOutputArea = new JTextArea();
-        gameOutputArea.setEditable(false);
-        JScrollPane gameScrollPane = new JScrollPane(gameOutputArea);
-        
-        JMenuBar bottomMenuBar = new JMenuBar();
-        JButton dialogueButton = new JButton("Add Dialogue");
-        JButton choiceButton = new JButton("Add Choices");
-        JButton runGameButton = new JButton("Run Game");
-        JButton removeLastButton = new JButton("Remove Last Entry");
-
-        dialogueButton.addActionListener(e -> {
-            String dialogue = JOptionPane.showInputDialog("Enter Dialogue:");
-            if (dialogue != null && !dialogue.isEmpty()) {
-                dialogues.add(dialogue);
-                textArea.append("Dialogue: " + dialogue + "\n");
-            }
+        SwingUtilities.invokeLater(() -> {
+            TextAdventureMaker frame = new TextAdventureMaker();
+            frame.setVisible(true);
         });
-
-        choiceButton.addActionListener(e -> {
-            String choiceInput = JOptionPane.showInputDialog("Enter Choices (separated by commas):");
-            if (choiceInput != null && !choiceInput.isEmpty()) {
-                String[] choiceArray = choiceInput.split(",");
-                ArrayList<String> followUpDialogues = new ArrayList<>();
-
-                for (String choice : choiceArray) {
-                    String followUp = JOptionPane.showInputDialog("Enter follow-up dialogue for choice: " + choice.trim());
-                    followUpDialogues.add(followUp);
-                }
-
-                if (!followUpDialogues.isEmpty()) {
-                    ArrayList<String> choicesList = new ArrayList<>();
-                    for (String choice : choiceArray) {
-                        choicesList.add(choice.trim());
-                    }
-                    choices.add(choicesList);
-                    choiceDialogues.add(followUpDialogues);
-                    textArea.append("Choices added: " + String.join(", ", choicesList) + "\n");
-                }
-            }
-        });
-
-        runGameButton.addActionListener(e -> {
-            currentDialogueIndex = 0; // Reset index for each run
-            gameOutputArea.setText(""); // Clear previous output
-            showNextDialogue();
-        });
-
-        removeLastButton.addActionListener(e -> removeLastEntry());
-
-        saveItem.addActionListener(e -> saveGame());
-        loadItem.addActionListener(e -> loadGame());
-
-        bottomMenuBar.add(dialogueButton);
-        bottomMenuBar.add(choiceButton);
-        bottomMenuBar.add(runGameButton);
-        bottomMenuBar.add(removeLastButton);
-
-        jframe.getContentPane().add(topMenuBar, BorderLayout.NORTH);
-        jframe.getContentPane().add(scrollPane, BorderLayout.WEST);
-        jframe.getContentPane().add(gameScrollPane, BorderLayout.CENTER);
-        jframe.getContentPane().add(bottomMenuBar, BorderLayout.SOUTH);
-
-        jframe.setVisible(true);
-    }
-
-    private static void showNextDialogue() {
-        if (currentDialogueIndex < dialogues.size()) {
-            String dialogue = dialogues.get(currentDialogueIndex);
-            gameOutputArea.append("Narrator: " + dialogue + "\n");
-            currentDialogueIndex++;
-
-            // Show a dialog and wait for user to acknowledge
-            JOptionPane.showMessageDialog(null, "Press OK to continue...");
-
-            // Only show choices if there's a corresponding choice for the current dialogue
-            if (currentDialogueIndex - 1 < choices.size()) {
-                showChoicesIfAvailable();
-            } else {
-                // If there are no choices, just show the next dialogue
-                showNextDialogue();
-            }
-        } else {
-            gameOutputArea.append("The End.\n");
-        }
-    }
-
-    private static void showChoicesIfAvailable() {
-        int choiceIndex = currentDialogueIndex - 1; // Current dialogue index minus one
-
-        if (choiceIndex < choices.size()) {
-            ArrayList<String> availableChoices = choices.get(choiceIndex);
-            ArrayList<String> followUpDialogues = choiceDialogues.get(choiceIndex);
-
-            // Present the choices to the user
-            int userChoiceIndex = JOptionPane.showOptionDialog(null,
-                    "Choose an option:",
-                    "Choices",
-                    JOptionPane.DEFAULT_OPTION,
-                    JOptionPane.INFORMATION_MESSAGE,
-                    null,
-                    availableChoices.toArray(),
-                    availableChoices.get(0));
-
-            if (userChoiceIndex >= 0 && userChoiceIndex < followUpDialogues.size()) {
-                gameOutputArea.append("You chose: " + availableChoices.get(userChoiceIndex) + "\n");
-                gameOutputArea.append("Narrator: " + followUpDialogues.get(userChoiceIndex) + "\n");
-            }
-
-            // Proceed to the next dialogue after handling the choice
-            showNextDialogue();
-        } else {
-            showNextDialogue();
-        }
-    }
-
-    private static void removeLastEntry() {
-        if (!dialogues.isEmpty()) {
-            dialogues.remove(dialogues.size() - 1);
-            if (!choices.isEmpty()) {
-                choices.remove(choices.size() - 1);
-                choiceDialogues.remove(choiceDialogues.size() - 1);
-            }
-            textArea.setText(""); // Clear text area
-            for (String dialogue : dialogues) {
-                textArea.append("Dialogue: " + dialogue + "\n");
-            }
-            JOptionPane.showMessageDialog(null, "Last entry removed successfully!");
-        } else {
-            JOptionPane.showMessageDialog(null, "No entries to remove!");
-        }
-    }
-
-    private static void saveGame() {
-        try {
-            String filename = JOptionPane.showInputDialog("Enter filename to save (without extension):");
-            if (filename != null && !filename.isEmpty()) {
-                BufferedWriter writer = new BufferedWriter(new FileWriter(filename + ".tgame"));
-                for (String dialogue : dialogues) {
-                    writer.write("DIALOGUE:" + dialogue);
-                    writer.newLine();
-                }
-                for (int i = 0; i < choices.size(); i++) {
-                    writer.write("CHOICES:" + String.join(",", choices.get(i)));
-                    writer.newLine();
-                    writer.write("FOLLOWUP:" + String.join(",", choiceDialogues.get(i)));
-                    writer.newLine();
-                }
-                writer.close();
-                JOptionPane.showMessageDialog(null, "Game saved successfully!");
-            }
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(null, "Error saving game: " + e.getMessage());
-        }
-    }
-
-    private static void loadGame() {
-        try {
-            String filename = JOptionPane.showInputDialog("Enter filename to load (without extension):");
-            if (filename != null && !filename.isEmpty()) {
-                BufferedReader reader = new BufferedReader(new FileReader(filename + ".tgame"));
-                dialogues.clear();
-                choices.clear();
-                choiceDialogues.clear();
-                textArea.setText(""); // Clear current text area
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    if (line.startsWith("DIALOGUE:")) {
-                        String dialogue = line.substring("DIALOGUE:".length());
-                        dialogues.add(dialogue);
-                        textArea.append("Dialogue: " + dialogue + "\n");
-                    } else if (line.startsWith("CHOICES:")) {
-                        String[] choice = line.substring("CHOICES:".length()).split(",");
-                        ArrayList<String> choicesList = new ArrayList<>();
-                        for (String c : choice) {
-                            choicesList.add(c.trim());
-                        }
-                        choices.add(choicesList);
-                        line = reader.readLine(); // Get the follow-up dialogues
-                        String[] followUps = line.substring("FOLLOWUP:".length()).split(",");
-                        ArrayList<String> followUpList = new ArrayList<>();
-                        for (String f : followUps) {
-                            followUpList.add(f.trim());
-                        }
-                        choiceDialogues.add(followUpList);
-                        textArea.append("Choices added: " + String.join(", ", choicesList) + "\n");
-                    }
-                }
-                reader.close();
-                JOptionPane.showMessageDialog(null, "Game loaded successfully!");
-            }
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(null, "Error loading game: " + e.getMessage());
-        }
     }
 }

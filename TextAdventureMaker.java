@@ -15,9 +15,10 @@ class Node {
     }
 
     public void setNext(Node next) {
-        this.next = next;
+        if (this.next == null) { // Only allow setting if there is no current connection
+            this.next = next;
+        }
     }
-
     public String getText() {
         return text;
     }
@@ -25,6 +26,9 @@ class Node {
     public Node getNext() {
         return next;
     }
+    public boolean isConnected() {
+        return next != null;
+    }    
 }
 
 // Dialogue Node class
@@ -39,16 +43,15 @@ class NodePanel extends JPanel {
     private DialogueNode node;
     private Point mousePoint;
     private boolean dragging = false;
-    private boolean isConnecting = false;
-    private Point connectionEndPoint;
-    
+    private static NodePanel selectedNode = null; // Track selected node for connections
+
     public NodePanel(DialogueNode node) {
         this.node = node;
         setBorder(new LineBorder(Color.BLACK));
         setPreferredSize(new Dimension(150, 100));
         setBackground(Color.LIGHT_GRAY);
         setLayout(null);
-        
+
         JLabel label = new JLabel(node.getText());
         label.setHorizontalAlignment(SwingConstants.CENTER);
         label.setBounds(0, 0, 150, 80);
@@ -96,41 +99,32 @@ class NodePanel extends JPanel {
         rightDot.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                isConnecting = true;
-                connectionEndPoint = getLocation();
-                connectionEndPoint.translate(150, 40); // Start from the right dot
+                // Select this node for connection
+                selectedNode = NodePanel.this;
+                repaint(); // Optionally highlight this node
             }
+        });
 
+        leftDot.addMouseListener(new MouseAdapter() {
             @Override
-            public void mouseReleased(MouseEvent e) {
-                if (isConnecting) {
-                    // Check for other nodes to connect to
-                    for (Component comp : getParent().getComponents()) {
-                        if (comp instanceof NodePanel && comp != NodePanel.this) {
-                            NodePanel targetNode = (NodePanel) comp;
-                            if (targetNode.getBounds().contains(e.getPoint())) {
-                                // Connect this node to the target node
-                                node.setNext(targetNode.getNode());
-                                break;
-                            }
-                        }
+            public void mousePressed(MouseEvent e) {
+                if (selectedNode != null && selectedNode != NodePanel.this) {
+                    // Only connect if the current node and selected node are both unconnected
+                    if (!node.isConnected() && !selectedNode.getNode().isConnected()) {
+                        // Connect the selected node to this node
+                        selectedNode.getNode().setNext(node); // Connect
+                        selectedNode = null; // Reset selected node
+                        getParent().repaint(); // Refresh the panel
+                    } else {
+                        JOptionPane.showMessageDialog(getParent(), 
+                            "One of the nodes is already connected to another node.", 
+                            "Connection Error", 
+                            JOptionPane.ERROR_MESSAGE);
                     }
                 }
-                isConnecting = false;
-                connectionEndPoint = null; // Reset end point
-                getParent().repaint(); // Refresh the panel
             }
-        });
+        });        
 
-        rightDot.addMouseMotionListener(new MouseAdapter() {
-            @Override
-            public void mouseDragged(MouseEvent e) {
-                if (isConnecting) {
-                    connectionEndPoint = e.getLocationOnScreen();
-                    getParent().repaint();
-                }
-            }
-        });
     }
 
     private JPanel createDotPanel(Color color) {
@@ -151,13 +145,10 @@ class NodePanel extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        if (isConnecting && connectionEndPoint != null) {
-            // Draw the connection line
-            g.setColor(Color.BLACK);
-            g.drawLine(
-                getX() + 150, getY() + 40,
-                (int) (connectionEndPoint.getX()), (int) (connectionEndPoint.getY())
-            );
+        if (selectedNode == this) {
+            // Highlight the selected node
+            g.setColor(Color.BLUE);
+            g.drawRect(0, 0, getWidth() - 1, getHeight() - 1); // Highlight selected node
         }
     }
 }
@@ -200,18 +191,10 @@ public class TextAdventureMaker extends JFrame {
         canvas.add(nodePanel);
         canvas.repaint();
         canvas.revalidate();
-
-        // Connect to the previous node
-        if (head == null) {
-            head = newNode; // This is the first node
-        } else {
-            DialogueNode current = head;
-            while (current.getNext() != null) {
-                current = (DialogueNode) current.getNext(); // Cast to DialogueNode
-            }
-            current.setNext(newNode); // Link the new node to the last node
-        }
-    }
+    
+        // Don't automatically connect the new node to the previous one.
+        // The connection logic will now solely rely on user interaction.
+    }    
 
     private void drawConnections(Graphics g) {
         for (Component comp : canvas.getComponents()) {

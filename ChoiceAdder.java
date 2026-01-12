@@ -1,6 +1,13 @@
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
+/**
+ * Adds a new choice to the current story node when triggered.
+ * Uses ChoiceFactory to create the choice and ChoicesUIRefresher to update the UI.
+ * Requires a valid currentNode in the EditorContext.
+ * 
+ * @author Carsen Gafford
+ */
 class ChoiceAdder implements ActionListener {
     private final EditorContext context;
     private final ChoiceFactory factory;

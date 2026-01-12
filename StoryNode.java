@@ -3,6 +3,11 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Represents a node in the story, containing narrative text and a list of choices.
+ * 
+ * @author Carsen Gafford
+ */
 class StoryNode implements Serializable {
     @Serial private static final long serialVersionUID = 1L;
     String id;

@@ -1,3 +1,8 @@
+/**
+ * Generates the Java code for the game runner.
+ * 
+ * @author Carsen Gafford
+ */
 class RunnerCodeGenerator {
     String generate(String base64Data) {
         return """

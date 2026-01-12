@@ -1,3 +1,8 @@
+/**
+ * Creates and manages story nodes within the editor context.
+ * 
+ * @author Carsen Gafford
+ */
 class NodeCreator {
     private final StoryNodeFactory factory;
 

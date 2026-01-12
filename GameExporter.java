@@ -7,6 +7,11 @@ import java.util.jar.Attributes;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 
+/**
+ * Exports the current story as a runnable JAR file.
+ * 
+ * @author Carsen Gafford
+ */
 class GameExporter implements java.awt.event.ActionListener {
     private final EditorContext context;
     private final RunnerCodeGenerator generator = new RunnerCodeGenerator();

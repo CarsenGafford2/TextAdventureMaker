@@ -1,7 +1,12 @@
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-
+/**
+ * Action listener to remove a selected story node from the editor context.
+ * Prevents removal of the "START" node.
+ * 
+ * @author Carsen Gafford
+ */
 class NodeRemover implements ActionListener {
     private final EditorContext context;
 

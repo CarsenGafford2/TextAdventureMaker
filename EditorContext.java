@@ -2,6 +2,11 @@ import javax.swing.*;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Holds the context of the editor, including references to UI components and the current story state.
+ * 
+ * @author Carsen Gafford
+ */
 class EditorContext {
     JFrame frame;
     Map<String, StoryNode> nodeMap;

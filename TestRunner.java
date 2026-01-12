@@ -3,6 +3,11 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
+/**
+ * Action listener to run a test playthrough of the story in a dialog.
+ * 
+ * @author Carsen Gafford
+ */
 class TestRunner implements ActionListener {
     private final EditorContext context;
 

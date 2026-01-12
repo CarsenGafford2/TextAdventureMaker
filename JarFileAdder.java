@@ -5,6 +5,11 @@ import java.io.IOException;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 
+/**
+ * Utility class to add files to a JAR output stream.
+ * 
+ * @author Carsen Gafford
+ */
 class JarFileAdder {
     void add(JarOutputStream jos, File file) throws IOException {
         if (!file.exists()) return;

@@ -1,6 +1,11 @@
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
+/**
+ * List selection listener to handle changes in the selected story node.
+ * 
+ * @author Carsen Gafford
+ */
 class NodeSelectionHandler implements ListSelectionListener {
     private final EditorContext context;
     private final NarrativeSaver saver;

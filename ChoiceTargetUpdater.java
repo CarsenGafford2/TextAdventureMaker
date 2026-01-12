@@ -2,6 +2,11 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import javax.swing.*;
 
+/**
+ * Action listener to update the target node of a choice when selection changes.
+ * 
+ * @author Carsen Gafford
+ */
 class ChoiceTargetUpdater implements ActionListener {
     private final Choice choice;
 

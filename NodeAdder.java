@@ -2,6 +2,11 @@ import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
+/**
+ * Action listener to add a new story node with a unique ID.
+ * 
+ * @author Carsen Gafford
+ */
 class NodeAdder implements ActionListener {
     private final EditorContext context;
     private final NodeCreator creator;

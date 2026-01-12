@@ -1,5 +1,3 @@
-import javax.swing.*;
-
 class NodeCreator {
     private final StoryNodeFactory factory;
 

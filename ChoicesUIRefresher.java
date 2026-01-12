@@ -1,5 +1,3 @@
-import javax.swing.*;
-
 class ChoicesUIRefresher {
     private final ChoiceRowBuilder rowBuilder = new ChoiceRowBuilder();
 
